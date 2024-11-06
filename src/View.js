@@ -19,7 +19,8 @@ const View = ()=>{
         
         setBoard({
           title: data[0].BOARD_TITLE,
-          content: data[0].BOARD_CONTENT
+          content: data[0].BOARD_CONTENT,
+          image : data[0].IMAGE_PATH
         });
 
       })
@@ -39,6 +40,7 @@ const View = ()=>{
     <div>
       <h2>{board.title}</h2>
       <h3>본문: {board.content}</h3>
+      <img src={`http://localhost:8000/${board.image}`} style={{maxWidth:'300px'}}></img>
       <hr/>
       <Button variant="btn btn-secondary" onClick={()=>{navigate(-1)}}>
         목록
