@@ -1,58 +1,151 @@
-import React, { Component } from 'react';
+import React, { Component, useCallback, useEffect, useState } from 'react';
 import Table from 'react-bootstrap/Table';
 import Button from 'react-bootstrap/Button';
 import Axios from 'axios';
 import Form from 'react-bootstrap/Form';
 import { Link } from "react-router-dom";
 
-/*
-const submitTest = ()=>{
-  //react->서버로 요청을 보내고, 그 결과를 출력
 
-  // 지정된 ID를 가진 유저에 대한 요청
-  Axios.get('http://localhost:8000/')
-  .then(function (response) {
-    // 성공 핸들링
-    alert('등록 완료!');
-    console.log(response);
-  })
-  .catch(function (error) {
-    // 에러 핸들링
-    console.log(error);
-  })
+function Board({id, title, registerId, date, onCheckboxChange}){
+  return(
+    <tr>
+      <td>
+        <Form.Check // prettier-ignore
+          type="checkbox"
+          id={`default-checkbox`}
+          value={id}
+          onChange={(e)=>{
+            onCheckboxChange(e.target.checked, e.target.value) //인수두개 추가
+          }}
+        />
+      </td>
+      <td>{id}</td>
+      <td> <Link to={`/view/${id}`}>{title}</Link></td>
+      <td>{registerId}</td>
+      <td>{date}</td>
+    </tr>
+  )
 }
-*/
 
+const BoardList = ({isComplete, handleModify})=>{
+  const [boardList,setBoardList] = useState([]);
+  const [checkList,setCheckList] = useState([]);
 
-class Board extends Component {
-  render() {
-    return (
-      <tr>
-        <td>
-          <Form.Check // prettier-ignore
-            type="checkbox"
-            id={`default-checkbox`}
-            value={this.props.id}
-            onChange={(e)=>{
-              this.props.onCheckboxChange(e.target.checked, e.target.value) //인수두개 추가
-            }}
-          />
-        </td>
-        <td>{this.props.id}</td>
-        <td> <Link to={`/view?id=${this.props.id}`}>{this.props.title}</Link></td>
-        <td>{this.props.registerId}</td>
-        <td>{this.props.date}</td>
-      </tr>
-    )
-  }
+  const onCheckboxChange = (checked, id)=>{
+    //기존의 checkList을(기존값) prevList로 받는거 
+    setCheckList((prevList)=>{
+      if(checked){
+        return [...prevList,id]
+      }else{
+        return prevList.filter(item=> item !== id);
+      }
+    })
   }
 
+  //페이지 열리자마자 한번 작동, list에 변경 생기면 다시 작동
+  const getList = useCallback( ()=>{
+    Axios.get('http://localhost:8000/list')
+    .then((res)=>{
+      // 성공 핸들링
+      const {data} = res;
+      setBoardList(data);
+    })
+    .catch((e)=>{
+      // 에러 핸들링
+      console.log(e);
+    });
+  },[]);//최초 한번 실행
+  
+  useEffect(()=>{
+    getList();
+  },[getList]) //최초 한번 getList실행, getList객체가 변경되면(useCallback이 알려줌) getList실행
+
+  useEffect(()=>{
+    if(isComplete){
+      getList();
+    }
+  },[isComplete])
+
+  /*위에구문으로
+  componentDidUpdate(prevProps) {
+    // 목록 다시 조회
+    if (this.props.isComplete !== prevProps.isComplete) {
+      this.getList();
+    }
+  }
+  */
+
+  const handleDelete = ()=>{
+    if(checkList.length === 0){
+      alert('먼저 삭제할 게시글을 선택하세요');
+      return;
+    }
+
+     let boardIdList = checkList.join(); //삭제하려고 체크한 번호 1,2,3
+
+      Axios.post('http://localhost:8000/delete',{
+        boardIdList
+      })
+      .then((res) => {
+        //목록 다시 조회
+        getList();
+      })
+      .catch((e)=> {
+        // 에러 핸들링
+        console.log(e);
+      });
+  }
+
+
+
+
+  return(
+    <>
+      <Table striped bordered hover>
+        <thead>
+          <tr>
+            <th>선택</th>
+            <th>번호</th>
+            <th>제목</th>
+            <th>작성자</th>
+            <th>작성일</th>
+          </tr>
+        </thead>
+        <tbody>
+          {
+            boardList.map(
+              item=><Board 
+                key={item.BOARD_ID} 
+                id={item.BOARD_ID} 
+                title={item.BOARD_TITLE} 
+                registerId={item.REGISTER_ID} 
+                date={item.REGISTER_DATE}
+                onCheckboxChange={onCheckboxChange}
+              />
+            )
+          }
+        </tbody>
+      </Table>
+      <div className="d-flex gap-1">
+        <Link to="/write" className="btn btn-primary">
+          글쓰기
+        </Link>
+        <Button variant="secondary" onClick={()=>{
+          handleModify(checkList);
+        }}>수정하기</Button>
+        <Button variant="danger" onClick={()=>{handleDelete();}}>삭제하기</Button>
+      </div>
+    </>
+  )
+}
+
+export default BoardList;
+
+
+/*
 
 export default class BoardList extends Component {
-  state = {
-    BoardList : [],
-    checkList : []
-  }
+
   onCheckboxChange = (checked, id)=>{
     const list = [...this.state.checkList]; //복사본을 만들어서 값 넣고, 그걸 교체하는게 바람직함
     if(checked){
@@ -101,33 +194,7 @@ export default class BoardList extends Component {
     }
   }
 
-  handleDelete = ()=>{
-    if(this.state.checkList.length === 0){
-      alert('먼저 삭제할 게시글을 선택하세요');
-      return;
-    }
-
-    /*
-    let boardIdList = '';
-    this.state.checkList.at.forEach(num=>{
-      boardIdList = boardIdList + `${num},`;
-      console.log(boardIdList); //1,2,3
-      })
-      */
-     let boardIdList = this.state.checkList.join(); //삭제하려고 체크한 번호 1,2,3
-
-      Axios.post('http://localhost:8000/delete',{
-        boardIdList
-      })
-      .then((res) => {
-        //목록 다시 조회
-        this.getList();
-      })
-      .catch((e)=> {
-        // 에러 핸들링
-        console.log(e);
-      });
-  }
+  
 
 
 
@@ -176,3 +243,4 @@ export default class BoardList extends Component {
   }
 }
 
+/* */
