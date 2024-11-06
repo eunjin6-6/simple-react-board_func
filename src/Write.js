@@ -10,12 +10,26 @@ const Write = ({boardId, isModifyMode, handleCancel}) => {
   const [isEditMode,setIsEditMode] = useState(false);
   const [title,setTitle] = useState('');
   const [content,setContent] = useState('');
+  const [image, setImage] = useState(null);
+  
+  const handleImageChange = (e)=>{
+    console.log(e.target.files[0]);
+    setImage(e.target.files[0]);
+  }
 
   const write = (e)=>{
     e.preventDefault();
-    Axios.post('http://localhost:8000/insert',{
-      title:title,
-      content:content
+
+    //파일첨부하기
+    const formData = new FormData(); 
+    formData.append("title", title);
+    formData.append("content", content);
+    formData.append("image", image);
+
+
+    Axios.post('http://localhost:8000/insert',formData,{
+      //전송방식
+      headers:{"Content-Type":"multipart/form-data"}
     })
     .then((res) => {
       navigate('/'); //등록 완료 후 홈으로 이동
@@ -24,6 +38,8 @@ const Write = ({boardId, isModifyMode, handleCancel}) => {
       // 에러 핸들링
       console.log(e);
     });  
+
+
   }
 
 
@@ -108,6 +124,10 @@ const Write = ({boardId, isModifyMode, handleCancel}) => {
         <Form.Group className="mb-3" controlId="content">
           <Form.Label>내용</Form.Label>
           <Form.Control as="textarea" name="content" value={content} rows={3} onChange={handleChangeContent} />
+        </Form.Group>
+        <Form.Group className="mb-3" controlId="image">
+          <Form.Label>이미지</Form.Label>
+          <Form.Control type="file" accept="image/*" onChange={handleImageChange} />
         </Form.Group>
         <div className="d-flex gap-1">
           <Button variant="primary" type="submit" onClick={isEditMode ? update : write}>{isEditMode ? '수정완료' : '입력완료'}</Button>
